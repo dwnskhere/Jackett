@@ -978,7 +978,7 @@ Thanks to [LinuxServer.io](https://linuxserver.io) for maintaining the Docker im
 
 Jackett can be deployed to Heroku using Docker and `heroku.yml`. You can deploy with a single click using the button below or via the Heroku CLI.
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/Jackett/Jackett)
 
 #### Heroku Configuration Environment Variables
 
