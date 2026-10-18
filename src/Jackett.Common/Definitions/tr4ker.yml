@@ -90,17 +90,17 @@ login:
 
 search:
   paths:
-    - path: api/torznab
+    - path: api/torznab/all
       response:
         type: xml
 
   inputs:
     apikey: "{{ .Config.apikey }}"
-    t: "{{ .Query.Type }}"
+    t: "{{ if .Query.Type }}{{ .Query.Type }}{{ else }}search{{ end }}"
     q: "{{ .Keywords }}"
     cat: "{{ join .Categories \",\" }}"
-    season: "{{ .Query.Season }}"
-    ep: "{{ .Query.Ep }}"
+#    season: "{{ .Query.Season }}"
+#    ep: "{{ .Query.Ep }}"
     imdbid: "{{ .Query.IMDBID }}"
     tmdbid: "{{ .Query.TMDBID }}"
     tvdbid: "{{ .Query.TVDBID }}"
@@ -137,9 +137,6 @@ search:
     download:
       selector: enclosure
       attribute: url
-    infohash:
-      selector: "[name=infohash]"
-      attribute: value
     imdbid:
       selector: "[name=imdbid]"
       attribute: value
