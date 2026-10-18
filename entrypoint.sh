@@ -2,39 +2,12 @@
 set -e
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/Jackett"
-mkdir -p "$CONFIG_DIR"
+INDEXERS_DIR="$CONFIG_DIR/Indexers"
+mkdir -p "$CONFIG_DIR" "$INDEXERS_DIR"
 
 SERVER_CONFIG_FILE="$CONFIG_DIR/ServerConfig.json"
 
-if [ ! -f "$SERVER_CONFIG_FILE" ]; then
-    echo "{}" > "$SERVER_CONFIG_FILE"
-fi
-
-# Update ServerConfig.json from environment variables
-if [ -n "$API_KEY" ] || [ -n "$ADMIN_PASSWORD" ] || [ -n "$BASE_PATH" ]; then
-    echo "Updating ServerConfig.json from environment variables..."
-    jq_filter="."
-    if [ -n "$API_KEY" ]; then
-        jq_filter="$jq_filter | .APIKey = \$api_key"
-    fi
-    if [ -n "$ADMIN_PASSWORD" ]; then
-        jq_filter="$jq_filter | .AdminPassword = \$admin_password"
-    fi
-    if [ -n "$BASE_PATH" ]; then
-        jq_filter="$jq_filter | .BasePathOverride = \$base_path"
-    fi
-    jq_filter="$jq_filter | .UpdateDisabled = true"
-
-    tmp_file=$(mktemp)
-    jq --arg api_key "${API_KEY:-}" \
-       --arg admin_password "${ADMIN_PASSWORD:-}" \
-       --arg base_path "${BASE_PATH:-}" \
-       "$jq_filter" "$SERVER_CONFIG_FILE" > "$tmp_file" && mv "$tmp_file" "$SERVER_CONFIG_FILE"
-fi
-
-INDEXERS_DIR="$CONFIG_DIR/Indexers"
-mkdir -p "$INDEXERS_DIR"
-
+# 1. First restore configuration archive if CONFIG_URL or INDEXER_CONFIGS_BASE64 is provided
 if [ -n "$CONFIG_URL" ]; then
     echo "Restoring configuration from CONFIG_URL..."
     if [[ "$CONFIG_URL" =~ ^https:// ]]; then
@@ -59,7 +32,62 @@ elif [ -n "$INDEXER_CONFIGS_BASE64" ]; then
     rm -f "$tmp_archive"
 fi
 
+if [ ! -f "$SERVER_CONFIG_FILE" ]; then
+    echo "{}" > "$SERVER_CONFIG_FILE"
+fi
+
+# 2. Determine effective API Key and Admin Password hash
+EXISTING_API_KEY=$(jq -r '.APIKey // empty' "$SERVER_CONFIG_FILE" 2>/dev/null || true)
+EFFECTIVE_API_KEY="${API_KEY:-${EXISTING_API_KEY}}"
+
+if [ -z "$EFFECTIVE_API_KEY" ]; then
+    EFFECTIVE_API_KEY=$(cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || date +%s%N | sha256sum | head -c 32)
+fi
+
+HASHED_ADMIN_PASSWORD=""
+if [ -n "$ADMIN_PASSWORD" ]; then
+    HASHED_ADMIN_PASSWORD=$(printf "%s%s" "$ADMIN_PASSWORD" "$EFFECTIVE_API_KEY" | iconv -f UTF-8 -t UTF-16LE | sha512sum | awk '{print $1}')
+fi
+
+# 3. Apply ServerConfig.json overrides
+echo "Updating ServerConfig.json..."
+jq_filter="."
+jq_filter="$jq_filter | .APIKey = \$api_key"
+if [ -n "$HASHED_ADMIN_PASSWORD" ]; then
+    jq_filter="$jq_filter | .AdminPassword = \$admin_password"
+fi
+if [ -n "$BASE_PATH" ]; then
+    jq_filter="$jq_filter | .BasePathOverride = \$base_path"
+fi
+jq_filter="$jq_filter | .UpdateDisabled = true"
+
+tmp_file=$(mktemp)
+jq --arg api_key "$EFFECTIVE_API_KEY" \
+   --arg admin_password "$HASHED_ADMIN_PASSWORD" \
+   --arg base_path "${BASE_PATH:-}" \
+   "$jq_filter" "$SERVER_CONFIG_FILE" > "$tmp_file" && mv "$tmp_file" "$SERVER_CONFIG_FILE"
+
 PORT="${PORT:-9117}"
 
+# Filter command-line arguments to ensure positional args and deprecated options (e.g., -c from shell wrappers) are ignored
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -c|--UseClient)
+            shift 2 2>/dev/null || shift 1
+            ;;
+        -c*)
+            shift 1
+            ;;
+        -*)
+            ARGS+=("$1")
+            shift 1
+            ;;
+        *)
+            shift 1
+            ;;
+    esac
+done
+
 echo "Starting Jackett on port $PORT..."
-exec /opt/Jackett/jackett --Port "$PORT" --ListenPublic --NoUpdates "$@"
+exec /opt/Jackett/jackett --Port "$PORT" --ListenPublic --NoUpdates "${ARGS[@]}"
