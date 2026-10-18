@@ -1,0 +1,37 @@
+{
+  "name": "Jackett",
+  "description": "API Support for your favorite torrent trackers",
+  "keywords": [
+    "jackett",
+    "torznab",
+    "torrent",
+    "indexer",
+    "p2p"
+  ],
+  "website": "https://github.com/Jackett/Jackett",
+  "repository": "https://github.com/Jackett/Jackett",
+  "stack": "container",
+  "env": {
+    "ADMIN_PASSWORD": {
+      "description": "Password to protect the Jackett web dashboard.",
+      "required": true
+    },
+    "API_KEY": {
+      "description": "API Key for accessing Jackett API. Automatically generated if left blank.",
+      "generator": "secret",
+      "required": false
+    },
+    "BASE_PATH": {
+      "description": "Base path override for reverse proxy setups (e.g., /jackett).",
+      "required": false
+    },
+    "INDEXER_CONFIGS_BASE64": {
+      "description": "Base64-encoded tar.gz or zip archive containing indexer configuration files.",
+      "required": false
+    },
+    "CONFIG_URL": {
+      "description": "HTTPS URL pointing to a tar.gz or zip archive containing indexer configuration files.",
+      "required": false
+    }
+  }
+}
