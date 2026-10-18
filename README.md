@@ -18,6 +18,7 @@
    - [Linux Installation (ARMv6 or below)](#linux-installation-armv6-or-below)
    - [macOS Installation](#macos-installation)
    - [Docker Installation](#docker-installation)
+   - [Heroku Installation](#heroku-installation)
    - [Other Installation Methods](#other-installation-methods)
 5. [Uninstallation](#uninstallation)
 6. [Configuration](#configuration)
@@ -970,6 +971,42 @@ Docker installation is highly recommended, especially if you are experiencing Mo
 Detailed instructions are available at [LinuxServer.io Jackett Docker](https://hub.docker.com/r/linuxserver/jackett/)
 
 Thanks to [LinuxServer.io](https://linuxserver.io) for maintaining the Docker image.
+
+---
+
+### Heroku Installation
+
+Jackett can be deployed to Heroku using Docker and `heroku.yml`. You can deploy with a single click using the button below or via the Heroku CLI.
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
+#### Heroku Configuration Environment Variables
+
+When deploying on Heroku, you can configure the following environment variables:
+
+- `ADMIN_PASSWORD` *(Required)*: Password to protect the Jackett web dashboard.
+- `API_KEY` *(Optional)*: Custom API key. If left blank, a secure key is automatically generated.
+- `BASE_PATH` *(Optional)*: Base path override for reverse proxy setups (e.g., `/jackett`).
+- `INDEXER_CONFIGS_BASE64` *(Optional)*: Base64-encoded tar.gz or zip archive containing indexer configurations.
+- `CONFIG_URL` *(Optional)*: HTTPS URL pointing to a tar.gz or zip archive containing indexer configurations.
+
+#### Deploying via Heroku CLI
+
+```bash
+# Log in to Heroku
+heroku login
+heroku container:login
+
+# Create a new Heroku application
+heroku create my-jackett-app
+
+# Set required environment variables
+heroku config:set ADMIN_PASSWORD="YourSecurePassword" -a my-jackett-app
+
+# Set container stack and deploy
+heroku stack:set container -a my-jackett-app
+git push heroku master
+```
 
 ---
 
